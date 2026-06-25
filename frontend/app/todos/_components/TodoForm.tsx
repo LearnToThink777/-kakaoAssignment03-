@@ -45,7 +45,8 @@ export default function TodoForm({ mode, todo }: Props) {
 
       if (!res.ok) throw new Error("저장에 실패했습니다.");
 
-      router.push("/todos");
+      // 저장한 날짜의 주간으로 돌아간다 (오늘로 리셋되지 않도록)
+      router.push(`/todos?date=${date}`);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "오류가 발생했습니다.");
@@ -60,7 +61,8 @@ export default function TodoForm({ mode, todo }: Props) {
     try {
       const res = await fetch(`${API_URL}/todos/${todo.id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("삭제에 실패했습니다.");
-      router.push("/todos");
+      // 삭제해도 보던 날짜의 주간을 유지한다
+      router.push(`/todos?date=${date}`);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "오류가 발생했습니다.");
@@ -124,7 +126,7 @@ export default function TodoForm({ mode, todo }: Props) {
           </button>
           <button
             type="button"
-            onClick={() => router.push("/todos")}
+            onClick={() => router.push(`/todos?date=${date}`)}
             disabled={busy}
             className="flex-1 rounded-lg bg-violet-100 px-4 py-2 text-sm font-medium text-violet-700 hover:bg-violet-200 disabled:opacity-60"
           >

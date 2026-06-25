@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Todo } from "@/lib/todos";
@@ -23,16 +23,33 @@ const STATUS_TABS: { key: StatusFilter; label: string }[] = [
   { key: "done", label: "완료" },
 ];
 
-export default function TodoBoard({ todos }: { todos: Todo[] }) {
+export default function TodoBoard({
+  todos,
+  initialDate,
+}: {
+  todos: Todo[];
+  initialDate?: string;
+}) {
   const router = useRouter();
 
-  // 오늘이 속한 주의 월요일을 기준으로 시작
-  const [monday, setMonday] = useState(() => startOfWeek(new Date()));
-  const [selectedDate, setSelectedDate] = useState(() => formatDate(new Date()));
+  // initialDate(수정/생성 후 복귀 날짜)가 있으면 그 날짜, 없으면 오늘 기준으로 시작
+  const start = initialDate ? parseDate(initialDate) : new Date();
+  const [monday, setMonday] = useState(() => startOfWeek(start));
+  const [selectedDate, setSelectedDate] = useState(
+    () => initialDate ?? formatDate(new Date())
+  );
   const [keyword, setKeyword] = useState("");
   const [status, setStatus] = useState<StatusFilter>("all");
   const [title, setTitle] = useState("");
   const [busy, setBusy] = useState(false);
+
+  // 수정/생성 복귀로 받은 ?date=는 첫 렌더에만 쓰고 URL에서 즉시 제거한다.
+  // (보드 상태는 그대로 유지되지만, 이 화면을 새로고침하면 기본값인 오늘 주간으로 돌아간다)
+  useEffect(() => {
+    if (initialDate) {
+      window.history.replaceState(null, "", "/todos");
+    }
+  }, [initialDate]);
 
   const weekDays = useMemo(() => getWeekDays(monday), [monday]);
 
