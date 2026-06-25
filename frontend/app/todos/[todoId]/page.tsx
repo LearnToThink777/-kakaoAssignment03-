@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTodo } from "@/app/actions";
 import TodoForm from "../_components/TodoForm";
@@ -20,13 +19,7 @@ export default async function EditTodoPage({
   }
 
   return (
-    <main className="mx-auto w-full max-w-xl p-6">
-      <Link href="/todos" className="text-sm text-gray-500 hover:underline">
-        ← 목록으로
-      </Link>
-      <h1 className="mb-6 mt-2 text-2xl font-bold text-indigo-700">
-        할 일 수정
-      </h1>
+    <main className="flex min-h-screen items-center justify-center bg-violet-100 p-6">
       <TodoForm mode="edit" todo={todo} />
     </main>
   );

@@ -2,6 +2,16 @@
   "name": "frontend",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=24.0.0 <25.0.0"
+  },
+  "devEngines": {
+    "runtime": {
+      "name": "node",
+      "version": ">=24.0.0 <25.0.0",
+      "onFail": "warn"
+    }
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",

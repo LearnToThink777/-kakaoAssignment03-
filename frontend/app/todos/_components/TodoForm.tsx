@@ -3,22 +3,21 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Todo } from "@/lib/todos";
+import { formatDate } from "@/lib/week";
 
 type Props = {
   mode: "create" | "edit";
   todo?: Todo;
 };
 
-function today(): string {
-  return new Date().toISOString().slice(0, 10);
-}
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "/api";
 
 export default function TodoForm({ mode, todo }: Props) {
   const router = useRouter();
   const [title, setTitle] = useState(todo?.title ?? "");
-  const [date, setDate] = useState(todo?.date ?? today());
+  const [date, setDate] = useState(todo?.date ?? formatDate(new Date()));
   const [completed, setCompleted] = useState(todo?.completed ?? false);
-  const [submitting, setSubmitting] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const isEdit = mode === "edit";
@@ -30,13 +29,12 @@ export default function TodoForm({ mode, todo }: Props) {
       return;
     }
 
-    setSubmitting(true);
+    setBusy(true);
     setError(null);
 
     try {
       // 백엔드 직접 호출이 아니라 route.ts 프록시로 보낸다 (주소는 환경변수)
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "/api";
-      const url = isEdit && todo ? `${apiUrl}/todos/${todo.id}` : `${apiUrl}/todos`;
+      const url = isEdit && todo ? `${API_URL}/todos/${todo.id}` : `${API_URL}/todos`;
       const method = isEdit ? "PUT" : "POST";
 
       const res = await fetch(url, {
@@ -45,66 +43,105 @@ export default function TodoForm({ mode, todo }: Props) {
         body: JSON.stringify({ title: title.trim(), date, completed }),
       });
 
-      if (!res.ok) {
-        throw new Error("저장에 실패했습니다.");
-      }
+      if (!res.ok) throw new Error("저장에 실패했습니다.");
 
       router.push("/todos");
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "오류가 발생했습니다.");
-      setSubmitting(false);
+      setBusy(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!todo) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(`${API_URL}/todos/${todo.id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("삭제에 실패했습니다.");
+      router.push("/todos");
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "오류가 발생했습니다.");
+      setBusy(false);
     }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <label className="mb-1 block text-sm font-medium text-gray-700">
-          할 일
-        </label>
-        <input
-          type="text"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="할 일을 입력하세요"
-          className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-indigo-500"
-        />
-      </div>
+    <div className="w-full max-w-md rounded-3xl bg-white p-7 shadow-xl shadow-violet-200/50">
+      <h1 className="text-center text-2xl font-extrabold italic text-violet-700">
+        {isEdit ? "Todo 수정" : "새 할 일"}
+      </h1>
 
-      <div>
-        <label className="mb-1 block text-sm font-medium text-gray-700">
-          날짜
-        </label>
-        <input
-          type="date"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-indigo-500"
-        />
-      </div>
-
-      {isEdit && (
-        <label className="flex items-center gap-2 text-sm text-gray-700">
+      <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+        <div>
+          <label className="mb-1 block text-sm font-medium text-violet-700">
+            제목
+          </label>
           <input
-            type="checkbox"
-            checked={completed}
-            onChange={(e) => setCompleted(e.target.checked)}
-            className="h-4 w-4"
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="할 일을 입력하세요"
+            className="w-full rounded-lg border border-violet-200 bg-violet-50/40 px-3 py-2 text-sm outline-none focus:border-violet-400"
           />
-          완료
-        </label>
-      )}
+        </div>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+        <div>
+          <label className="mb-1 block text-sm font-medium text-violet-700">
+            날짜
+          </label>
+          <input
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className="w-full rounded-lg border border-violet-200 bg-violet-50/40 px-3 py-2 text-sm outline-none focus:border-violet-400"
+          />
+        </div>
 
-      <button
-        type="submit"
-        disabled={submitting}
-        className="w-full rounded-lg bg-indigo-600 px-4 py-2 font-medium text-white hover:bg-indigo-700 disabled:opacity-60"
-      >
-        {submitting ? "저장 중..." : isEdit ? "수정" : "추가"}
-      </button>
-    </form>
+        {isEdit && (
+          <label className="flex items-center gap-2 rounded-lg bg-violet-50/60 px-3 py-2.5 text-sm text-gray-700">
+            <input
+              type="checkbox"
+              checked={completed}
+              onChange={(e) => setCompleted(e.target.checked)}
+              className="h-4 w-4 accent-violet-600"
+            />
+            완료됨
+          </label>
+        )}
+
+        {error && <p className="text-sm text-red-600">{error}</p>}
+
+        <div className="flex gap-2 pt-1">
+          <button
+            type="submit"
+            disabled={busy}
+            className="flex-1 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-700 disabled:opacity-60"
+          >
+            {busy ? "처리 중..." : isEdit ? "저장" : "추가"}
+          </button>
+          <button
+            type="button"
+            onClick={() => router.push("/todos")}
+            disabled={busy}
+            className="flex-1 rounded-lg bg-violet-100 px-4 py-2 text-sm font-medium text-violet-700 hover:bg-violet-200 disabled:opacity-60"
+          >
+            취소
+          </button>
+          {isEdit && (
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={busy}
+              className="rounded-lg border border-red-200 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-60"
+            >
+              삭제
+            </button>
+          )}
+        </div>
+      </form>
+    </div>
   );
 }
